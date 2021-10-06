@@ -1,0 +1,553 @@
+{
+	"info": {
+		"_postman_id": "eea0c06d-2476-42f7-a0c2-d6cc76673939",
+		"name": "FormSubmission_QAT",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Get Access Token Apigee ",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var test = JSON.parse(responseBody);",
+							"pm.environment.set(\"AccessTokenQAT\", test.access_token); ",
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"client_id\": \"dpmKV1h8qr7644wngu6rB2Ua2c0c3VXb\",\n  \"client_secret\": \"ZILb6G21qwTXRuAb\",\n  \"grant_type\": \"client_credentials\"\n}\n"
+				},
+				"url": {
+					"raw": "https://manulife-development-test.apigee.net/v1/mg/oauth2/token",
+					"protocol": "https",
+					"host": [
+						"manulife-development-test",
+						"apigee",
+						"net"
+					],
+					"path": [
+						"v1",
+						"mg",
+						"oauth2",
+						"token"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Salesforce Access Token",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.environment.set(\"salesforceAccessTokenQAT\", JSON.parse(responseBody).data.GetAccessToken.AccessToken); ",
+							"",
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"//postman.setNextRequest('Create Salesforce Data');"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{AccessTokenQAT}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "instanceURL",
+						"value": "https://mlc--qat2.cs13.my.salesforce.com/",
+						"type": "text",
+						"disabled": true
+					}
+				],
+				"body": {
+					"mode": "graphql",
+					"graphql": {
+						"query": "query GetAccessToken($username: String!, $password: String!) {\n  GetAccessToken(username: $username, password: $password) {\n    AccessToken\n    InstanceURL\n  }\n}\n",
+						"variables": "{\n\t\"username\" : \"{{SFDC_USERNAME_QAT}}\",\n\t\"password\" : \"{{SFDC_PASSWORD_QAT}}\"\n}"
+					}
+				},
+				"url": {
+					"raw": "https://cac.internal.mesh.test.api.manulife.com/v1/salesforce/platform/sfcore/gateway/",
+					"protocol": "https",
+					"host": [
+						"cac",
+						"internal",
+						"mesh",
+						"test",
+						"api",
+						"manulife",
+						"com"
+					],
+					"path": [
+						"v1",
+						"salesforce",
+						"platform",
+						"sfcore",
+						"gateway",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Form Submission Record with Parametrize",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"",
+							"",
+							"//pm.setNextRequest(\"null\");",
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"pm.test(\"Response time is less than 5sec\", function () {",
+							"    pm.expect(pm.response.responseTime).to.be.below(5000);",
+							"});",
+							"pm.test(\"SetFormSubmission\", function () {",
+							"    pm.expect(pm.response.text()).to.include(\"SetFormSubmission\");",
+							"}); ",
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"//pm.globals.get(\"variable_key\");",
+							"var jsonData = pm.response.json();",
+							"pm.globals.set(\"SetFormSubmission\", jsonData.data.SetFormSubmission);",
+							"//pm.globals.get(\"SetFormSubmission\", SetFormSubmission);",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{AccessTokenQAT}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "instanceURL",
+						"value": "https://mlc--qat2.cs13.my.salesforce.com/",
+						"type": "text",
+						"disabled": true
+					},
+					{
+						"key": "accessToken",
+						"value": "{{salesforceAccessTokenQAT}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "Sforce-Auto-Assign",
+						"value": "false",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "graphql",
+					"graphql": {
+						"query": "mutation SetFormInSalesforce($form: CaseInputFormSubmission!) {\r\n  SetFormSubmission(formSubmission: $form)\r\n}",
+						"variables": "{\r\n  \"form\": {\r\n   \"Notifier_First_Name__c\": \"{{Notifier_First_Name__c}}\",\r\n   \"Notifier_Last_Name__c\":\"{{Notifier_Last_Name__c}}\",\r\n   \"Notifier_Relation_To_Customer__c\":\"{{Notifier_Relation_To_Customer__c}}\",\r\n   \"Notifier_Relation_To_Customer_Other__c\":\"{{Notifier_Relation_To_Customer_Other__c}}\",\r\n   \"Financial_Advisor__c\":\"{{Financial_Advisor__c}}\",\r\n   \"Customer_First_Name__c\":\"{{Customer_First_Name__c}}\",\r\n   \"Customer_Last_Name__c\":\"{{Customer_Last_Name__c}}\",\r\n   \"Customer_Birth_Date__c\":\"{{Customer_Birth_Date__c}}\",\r\n   \"Date_of_Death__c\":\"{{Date_of_Death__c}}\",\r\n   \"Country_of_Death__c\":\"{{Country_of_Death__c}}\",\r\n   \"Asset__c\":\"{{Asset__c}}\",\r\n   \"Business_Unit__c\":\"{{Business_Unit__c}}\",\r\n   \"Additional_Asset_List__c\":\"{{Additional_Asset_List__c}}\",\r\n   \"Funeral_Home_Name__c\":\"{{Funeral_Home_Name__c}}\",\r\n   \"Funeral_Home_Phone__c\":\"{{Funeral_Home_Phone__c}}\",\r\n   \"Funeral_Home_Address__c\":\"{{Funeral_Home_Address__c}}\",\r\n   \"Same_As_Notifier__c\":\"{{Same_As_Notifier__c}}\",\r\n   \"Contact_First_Name__c\":\"{{Contact_First_Name__c}}\",\r\n   \"Contact_Last_Name__c\":\"{{Contact_Last_Name__c}}\",\r\n   \"Contact_Relationship__c\":\"{{Contact_Relationship__c}}\", \r\n   \"Other_Contact_Relationship__c\":\"{{Other_Contact_Relationship__c}}\",\r\n   \"Contact_Email__c\":\"{{Contact_Email__c}}\",\r\n   \"Contact_Home_Phone__c\":\"{{Contact_Home_Phone__c}}\",\r\n   \"Language__c\":\"{{Language__c}}\",\r\n   \"Cause_of_Death__c\":\"{{Cause_of_Death__c}}\"\r\n  }\r\n}"
+					}
+				},
+				"url": {
+					"raw": "https://cac.internal.mesh.test.api.manulife.com/v1/salesforce/platform/sfcore/gateway/",
+					"protocol": "https",
+					"host": [
+						"cac",
+						"internal",
+						"mesh",
+						"test",
+						"api",
+						"manulife",
+						"com"
+					],
+					"path": [
+						"v1",
+						"salesforce",
+						"platform",
+						"sfcore",
+						"gateway",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetCaseNumber",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							" var jsonData = pm.response.json();",
+							" pm.globals.set(\"getFormSubmission\", jsonData.data.GetFormSubmission.Id);",
+							" pm.environment.set(\"caseID\", jsonData.data.GetFormSubmission.Case_Id__c);",
+							"",
+							"pm.test(\"Verifies the Formsubmission ID\", function () {",
+							"   ",
+							"    pm.expect(pm.globals.get(\"getFormSubmission\")).to.eql(pm.globals.get(\"SetFormSubmission\"));",
+							"});",
+							"// checks the case created and linked to form submission record",
+							"pm.test(\"Verifies the Case ID is not null\", function()",
+							"{",
+							"    pm.expect(jsonData.data.Case_Id__c != null)",
+							"})"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"//starts the execution after 4 seconds.\r",
+							"setTimeout(function(){}, 4000)"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{AccessTokenQAT}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "accessToken",
+						"value": "{{salesforceAccessTokenQAT}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "graphql",
+					"graphql": {
+						"query": "query FormSubmission {\r\n  GetFormSubmission(id:\"{{SetFormSubmission}}\"){\r\n    Case_Id__c\r\n    Id\r\n  }\r\n  \r\n}"
+					}
+				},
+				"url": {
+					"raw": "https://cac.internal.mesh.test.api.manulife.com/v1/salesforce/platform/sfcore/gateway/",
+					"protocol": "https",
+					"host": [
+						"cac",
+						"internal",
+						"mesh",
+						"test",
+						"api",
+						"manulife",
+						"com"
+					],
+					"path": [
+						"v1",
+						"salesforce",
+						"platform",
+						"sfcore",
+						"gateway",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "VerifyCaseCreatedForFormSubmission",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"/**",
+							" * Form Submission Case Validation",
+							" *  ",
+							" */",
+							"var sample = pm.response.json();",
+							"",
+							"",
+							"/**",
+							" * Validates the Language populated on the Case,Case orign and Owner of the case",
+							" */",
+							"",
+							"if(data.Language__c == \"French\")",
+							"{",
+							"  pm.test(\"Verify the language of the case is French\", function () {",
+							"    pm.expect(sample.data.GetCase.Language__c).to.eql(\"French\");",
+							"})",
+							"pm.test(\"Verify the case Origin of case created\", function()",
+							"{",
+							"    pm.expect(sample.data.GetCase.Origin).to.equal(\"Life moments\")",
+							"",
+							"})",
+							"pm.test(\"Verify the case Owner of case created\", function()",
+							"{",
+							"    pm.expect(sample.data.GetCase.Owner_Queue_Name__c).to.equal(\"IIC Assurance Manuvie\")",
+							"",
+							"})",
+							"",
+							"}",
+							"else if(data.Language__c == \"English\")",
+							"{",
+							"pm.test(\"Verify the langauge of the case is English \", function () {",
+							"    pm.expect(sample.data.GetCase.Language__c).to.eql(\"English\");",
+							"});",
+							"pm.test(\"Verify the case Origin of case created\", function()",
+							"{",
+							"    pm.expect(sample.data.GetCase.Origin).to.equal(\"Life moments\")",
+							"",
+							"})",
+							"pm.test(\"Verify the case Owner of case created\", function()",
+							"{",
+							"    pm.expect(sample.data.GetCase.Owner_Queue_Name__c).to.equal(\"IIC Manulife Insurance\")",
+							"",
+							"})",
+							"}",
+							"",
+							"",
+							"/**",
+							" * Validates the Origin populated on the Case",
+							" * Test Case Name : Verify the origin is Web for created case",
+							" */",
+							"pm.test(\"Verify the origin is Form Submission for created case\",function()",
+							"{",
+							"    pm.expect(sample.data.GetCase.Case_Origin__c).to.eql(\"Web\")",
+							"})",
+							"",
+							"/**",
+							" * Test case verifies the status code is 200",
+							" * Test Case Name : Verify the Status code is 200",
+							" */",
+							"",
+							"pm.test(\"Verify the Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"/**",
+							" * Verifies the Authetication status on the case",
+							" * Out of Scope for now",
+							" ",
+							"",
+							"pm.test(\"verify the Authentication status of the case is Authenticated\", function()",
+							"{",
+							"    pm.expect(sample.data.GetCase.Authentication_Status_Case__c).to.eql(\"No Authentication Needed\")",
+							"})",
+							"*/",
+							"",
+							"/**",
+							" * Verify the Business Unit Populated on the case ",
+							" * ",
+							" */",
+							"pm.test(\"Verify the Business Unit populated on the case is IIC\",function()",
+							"{",
+							"pm.expect(sample.data.GetCase.Business_Unit__c).is.eql(\"IIC\")",
+							"}",
+							")",
+							"",
+							"/**",
+							" * Verified the case type and case subtype values are added on the case",
+							" */",
+							"",
+							"{",
+							"    pm.test(\"verify the case type added on the case was Life Moments\",function()",
+							"    {",
+							"        pm.expect(sample.data.GetCase.Type__c).to.eql(\"Life Moments\")",
+							"    });",
+							"    pm.test(\"Verifies the case subtype added on the case is Death Notification\", function()",
+							"    {",
+							"        pm.expect(sample.data.GetCase.Case_Subtype__c).to.eql(\"Death Notification\")",
+							"    })",
+							"",
+							"} ",
+							"   ",
+							"   /**",
+							"    * Verifies the contact type added on the case.",
+							"    */",
+							"pm.test(\"Verify Contact type populated on the case is Customer\",function()",
+							"{",
+							"    pm.expect(sample.data.GetCase.Contact_Type__c).to.eql(\"Customer\")",
+							"})",
+							"",
+							"/**",
+							" * Here i am passing the data that exists in SF with proper Asset,DOB of the contact linked to the Asset with role Owner or Member, expected that after case created, contact and Asset populated on the Case.",
+							" */",
+							"if(data.Asset__c != null && data.Customer_Birth_Date__c !=null)",
+							"{",
+							"    pm.test(\"Verify Asset Added on the Case\", function()",
+							"    {",
+							"        pm.expect(sample.data.GetCase.AssetId != null)",
+							"    })",
+							"    pm.test(\"Verify contact populated on the case\", function()",
+							"    {",
+							"        pm.expect(sample.data.GetCase.Contact_Name__c != null)",
+							"    })",
+							"}",
+							"else if(data.Asset__c = null)",
+							"{",
+							"    pm.test(\"Verify no Asset Added on the Case\", function()",
+							"    {",
+							"        pm.expect(sample.data.GetCase.AssetId == null)",
+							"    })",
+							"    pm.test(\"Verify no contact populated on the case\", function()",
+							"    {",
+							"        pm.expect(sample.data.GetCase.Contact_Name__c == null)",
+							"    })",
+							"}",
+							"",
+							"/**",
+							" * Verifies the Case intercation created for form Submission",
+							" * out of scope for now",
+							" ",
+							"pm.test(\"Verify case interaction created for the case\",function()",
+							"{",
+							"    pm.expect(sample.data.GetCase.Case_Interactions__c).to.eql(\"1\")",
+							"})",
+							"",
+							"*/"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{AccessTokenQAT}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "instanceURL",
+						"type": "text",
+						"value": "https://mlc--qat2.cs13.my.salesforce.com/",
+						"disabled": true
+					},
+					{
+						"key": "accessToken",
+						"type": "text",
+						"value": "{{salesforceAccessTokenQAT}}"
+					}
+				],
+				"body": {
+					"mode": "graphql",
+					"graphql": {
+						"query": "query{ GetCase(id: \"{{caseID}}\")\r\n{\r\n  CaseNumber\r\n  Case_Origin__c\r\n  Origin\r\n  Business_Unit__c\r\n  Type__c\r\n  Case_Subtype__c\r\n  Contact_Type__c\r\n  Authentication_Status_Case__c\r\n  Language__c\r\n  Owner_Queue_Name__c\r\n  Contact_Name__c\r\nAssetId\r\nContact_Name__c\r\nCase_Interactions__c\r\n  RecordTypeId \r\n}\r\n}\r\n\r\n",
+						"variables": ""
+					}
+				},
+				"url": {
+					"raw": "https://cac.internal.mesh.test.api.manulife.com/v1/salesforce/platform/sfcore/gateway/",
+					"protocol": "https",
+					"host": [
+						"cac",
+						"internal",
+						"mesh",
+						"test",
+						"api",
+						"manulife",
+						"com"
+					],
+					"path": [
+						"v1",
+						"salesforce",
+						"platform",
+						"sfcore",
+						"gateway",
+						""
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}
